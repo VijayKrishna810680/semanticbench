@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.env
+.pytest_cache/
+.streamlit/secrets.toml
+data/raw/
+data/*.duckdb
+data/*.duckdb.wal
+data/*.tmp
+logs/
+results/
