@@ -1,0 +1,77 @@
+# Curated semantic model for the Olist marketplace database (real data, 2016-09 to 2018-10).
+# Written by a data engineer. It tells the AI what the data MEANS and how the business measures things.
+
+tables:
+  orders:
+    description: One row per order placed on the marketplace.
+    grain: order_id
+    columns:
+      order_id: Order ID (primary key)
+      customer_id: Per-ORDER customer key. NOT a person. Join to customers.customer_id to get the real person (customer_unique_id).
+      order_status: "delivered, shipped, canceled, unavailable, invoiced, processing, created, approved"
+      order_purchase_timestamp: When the order was placed. USE THIS for all date/time filters and trends.
+      order_delivered_customer_date: When the customer received the order (NULL if not delivered)
+      order_estimated_delivery_date: Delivery date promised to the customer
+  customers:
+    description: Customer address per order.
+    columns:
+      customer_id: Per-order key (same as orders.customer_id)
+      customer_unique_id: The real, unique PERSON. Always count customers with COUNT(DISTINCT customer_unique_id).
+      customer_city: City name, lower case, no accents (e.g. 'sao paulo', 'rio de janeiro')
+      customer_state: 2-letter Brazilian state code (SP = Sao Paulo, RJ = Rio de Janeiro, MG = Minas Gerais, ...)
+  order_items:
+    description: One row per item in an order. An order can have many items from different sellers.
+    columns:
+      order_item_id: Item number within the order (1, 2, 3...)
+      price: Item price in BRL, excluding freight
+      freight_value: Shipping cost for the item in BRL
+  products:
+    columns:
+      product_category_name: Category name in PORTUGUESE. Join category_translation to get the English name.
+  category_translation:
+    columns:
+      product_category_name: Portuguese category name
+      product_category_name_english: English category name (e.g. health_beauty, bed_bath_table). Always show this one.
+  sellers:
+    columns:
+      seller_state: 2-letter state code of the seller
+  order_payments:
+    description: Payments for an order (an order can have several payment rows).
+    columns:
+      payment_type: "credit_card, boleto (bank slip), voucher, debit_card, not_defined"
+      payment_installments: Number of installments chosen
+      payment_value: Amount paid in BRL (includes freight)
+  order_reviews:
+    columns:
+      review_score: Customer rating from 1 (worst) to 5 (best)
+
+joins:
+  - orders.customer_id = customers.customer_id
+  - order_items.order_id = orders.order_id
+  - order_items.product_id = products.product_id
+  - order_items.seller_id = sellers.seller_id
+  - products.product_category_name = category_translation.product_category_name
+  - order_payments.order_id = orders.order_id
+  - order_reviews.order_id = orders.order_id
+
+rules:
+  - Sales metrics (revenue, orders, average order value, freight, payments, revenue per customer) count ONLY orders with order_status = 'delivered', unless the question asks about another status.
+  - The question how many customers means ALL customers (no status filter). Filter on delivered orders only when the question says bought, purchased, paying, repeat or active.
+  - Dates and years refer to orders.order_purchase_timestamp.
+  - Show categories by their English name (category_translation.product_category_name_english).
+  - Round percentages to 2 decimals and return them on a 0-100 scale.
+
+metrics:
+  revenue: SUM(order_items.price) for delivered orders (freight NOT included)
+  delivered_orders: COUNT(DISTINCT orders.order_id) WHERE order_status = 'delivered'
+  average_order_value: revenue / delivered_orders
+  customers: COUNT(DISTINCT customers.customer_unique_id) over the whole customers table, NO status filter
+  buying_customers: COUNT(DISTINCT customer_unique_id) of customers with at least one delivered order
+  revenue_per_customer: revenue / COUNT(DISTINCT customer_unique_id) of customers with delivered orders
+  freight_cost: SUM(order_items.freight_value) for delivered orders
+  late_delivery: a delivered order where CAST(order_delivered_customer_date AS DATE) > CAST(order_estimated_delivery_date AS DATE)
+  late_delivery_rate: 100.0 * late deliveries / delivered orders that have order_delivered_customer_date NOT NULL
+  delivery_days: date_diff('day', order_purchase_timestamp, order_delivered_customer_date), delivered orders with a delivery date
+  repeat_customer: a customer_unique_id with 2 or more delivered orders
+  average_review_score: AVG(order_reviews.review_score) over all reviews
+  payment_share: 100.0 * SUM(payment_value) of one payment_type / SUM(payment_value) of all types, delivered orders
