@@ -5,7 +5,7 @@ FREE options (no money needed):
   groq    - free API key at console.groq.com (no credit card).    GROQ_API_KEY
   gemini  - free API key at aistudio.google.com (no GCP billing). GEMINI_API_KEY
   ollama  - runs on your own laptop, fully offline.               (no key)
-Paid options: openai (OPENAI_API_KEY), anthropic (ANTHROPIC_API_KEY)
+Paid option: openai (OPENAI_API_KEY)
 """
 import os
 import re
@@ -18,9 +18,9 @@ OPENAI_COMPATIBLE = {
     "ollama": (os.getenv("OLLAMA_URL", "http://localhost:11434/v1"), None, "qwen2.5-coder:7b"),
     "openai": (None, "OPENAI_API_KEY", "gpt-4o-mini"),
 }
-PROVIDERS = list(OPENAI_COMPATIBLE) + ["anthropic"]
-DEFAULT_MODELS = {p: v[2] for p, v in OPENAI_COMPATIBLE.items()} | {"anthropic": "claude-haiku-4-5"}
-KEY_ENV = {p: v[1] for p, v in OPENAI_COMPATIBLE.items()} | {"anthropic": "ANTHROPIC_API_KEY"}
+PROVIDERS = list(OPENAI_COMPATIBLE)
+DEFAULT_MODELS = {p: v[2] for p, v in OPENAI_COMPATIBLE.items()}
+KEY_ENV = {p: v[1] for p, v in OPENAI_COMPATIBLE.items()}
 
 
 class MissingKeyError(RuntimeError):
@@ -33,12 +33,6 @@ def has_key(provider: str, api_key: str = "") -> bool:
 
 
 def _call(provider, model, messages, max_tokens, api_key=""):
-    if provider == "anthropic":
-        import anthropic
-        msg = anthropic.Anthropic(api_key=api_key or None).messages.create(
-            model=model, max_tokens=max_tokens, temperature=0, messages=messages)
-        return msg.content[0].text
-
     if provider in OPENAI_COMPATIBLE:
         from openai import OpenAI
         base_url, key_env, _ = OPENAI_COMPATIBLE[provider]
