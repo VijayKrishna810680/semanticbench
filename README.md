@@ -84,7 +84,7 @@ python analyze.py                                      # why answers were wrong
 ```
 
 Other free options: `--provider gemini` (key from [aistudio.google.com](https://aistudio.google.com/apikey), no GCP billing)
-and `--provider ollama` (runs offline on your laptop). Paid options: `openai`, `anthropic`.
+and `--provider ollama` (runs offline on your laptop). Paid option: `openai`.
 
 ## Deploy free on Streamlit Community Cloud
 
@@ -103,7 +103,7 @@ Or with Docker: `docker build -t semanticbench . && docker run -p 8501:8501 -e G
 | `core/agent.py` | Question → SQL → safety check → run → self-fix → plain-English answer |
 | `core/guard.py` | SQL safety rules (SELECT-only, known tables, blocked file functions) |
 | `core/db.py` | Read-only DuckDB connection with timeout |
-| `core/llm.py` | One interface for Groq, Gemini, Ollama, OpenAI and Anthropic |
+| `core/llm.py` | One interface for Groq, Gemini, Ollama and OpenAI |
 | `core/semantic.py` | Builds the context for each mode, and the prompts |
 | `core/checker.py` | Compares AI results with the correct results |
 | `core/logs.py` | Query log and feedback (SQLite) |
